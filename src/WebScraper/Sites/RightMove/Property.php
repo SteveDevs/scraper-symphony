@@ -14,13 +14,9 @@ class Property
 
     public function __construct()
     {
-        $this->prepareScrape($options);
+        
     }
 
-    private function prepareScrape(array $options) : void{
-        foreach($options as $option){
 
-        }
-    }
 
 }

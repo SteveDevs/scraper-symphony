@@ -29,7 +29,7 @@ class Scrape extends AbstractScrape
     const search_button_list_element = 'housePrices';
 
     const number_search_element = '.section .sort-bar-results';
-
+    
     //check if inactive
     const number_search_pagination_element = '.pagination .pagination-next';
 
@@ -48,24 +48,39 @@ class Scrape extends AbstractScrape
         ]
     ];
 
-    public function __construct(array $urls)
-    {
-        $this->urls = $urls;
-    }
-
-    public function getSearchNumberAddresses($url) : int{
+    private function getSearchNumberAddresses(string $url) : int{
         $crawler = new Crawler($url);
         $crawler->filter($this->number_search_element);
         return intval($crawler);
     }
 
 
-    private function getProperties($url, $forms, $filters  = null){
+    public function getProperties($search, $filters  = null){
         /*
             address, type of property and price of 5 most expensive properties sold in the last 10 years
         */
-        $url = $this->submitSearch($url, $forms);
-        $this->filterOnSelect(string $url, array $filters);
+        $forms = [
+            'select-button' => $this->search_button_list_element,
+            'form' => [
+                'searchLocation' => $search
+            ]
+        ];
+        $Date = strtotime(time()); // February 22nd, 2011. 28 days in this month, 29 next year.
+        
+        $ten_years_ago = strtotime('-10 year', time());
+
+        $url = $this->submitSearch($this->base_url, $forms);
+
+        $filters = [
+            'select-button' => $this->search_button_list_element,
+            'form' => [
+                'sortBy' => 'DEED_DATE'
+            ]
+        ];
+
+        $number = $this->getSearchNumberAddresses($url);
+        
+        $this->filterOnSelect($url, $filters);
 
         $client = new Client();
         $client->request('GET', $url);
