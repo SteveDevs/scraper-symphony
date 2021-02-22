@@ -9,13 +9,6 @@ use Symfony\Component\CssSelector\CssSelectorConverter;
 
 class Scrape extends Scraper 
 {
-    const types = [
-        'detached',
-        'flat',
-        'semi-detached',
-        'terraced',
-        'other'
-    ];
 
     const property_elements = [
         'address' => '.propertyCard > a',
@@ -28,7 +21,7 @@ class Scrape extends Scraper
 
     const search_button_list_element = 'housePrices';
 
-    const number_search_element = '#content > div.sold-prices-content-wrapper > div.sold-prices-content > div.results > div.results-filters > div.sort-bar > div.section.sort-bar-results';
+    const number_search_element = '.sort-bar-results';
 
     //check if inactive
     const number_search_pagination_element = '.pagination .pagination-next';
@@ -48,14 +41,10 @@ class Scrape extends Scraper
         ]
     ];
 
-    private function getSearchNumberAddresses(string $url) : int{
-        $crawler = new Crawler($url);
-        $converter = new CssSelectorConverter();
 
-        $crawler = $crawler->filterXPath($converter->toXPath(self::number_search_element));
-        var_dump($crawler);
-        exit();
-        return intval($crawler);
+
+    private function getSearchNumberAddresses(string $url) : int{
+        return intval($this->getSearchPageJsonData($url, "{\"results", "window.__APP_CONFIG__")->results->resultCount);
     }
 
 
@@ -78,18 +67,17 @@ class Scrape extends Scraper
 
         $url = $this->submitSearch(self::base_url, $forms);
 
-        $filters = ['sortBy' => 'DEED_DATE'];
+        //$filters = ['sortBy' => 'DEED_DATE'];
 
         $number = $this->getSearchNumberAddresses($url);
         
-        $url = $this->filterOnSelect($url, $filters);
-        var_dump($url);
+        //$url = $this->filterOnSelect($url, $filters);
+        //var_dump($url);
+        //exit();
+
+        $properties = $this->paginate($url, $ten_years_ago);
+        var_dump(count($properties));
         exit();
-
-        $client = new Client();
-        $client->request('GET', $url);
-
-        $this->paginate($client, 'propertyCard-content', NULL, []);
     }
 
 }
