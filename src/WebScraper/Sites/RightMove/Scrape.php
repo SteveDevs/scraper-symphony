@@ -1,13 +1,13 @@
 <?php
 namespace App\WebScraper\Sites\RightMove;
 
-use App\WebScraper\AbstractScrape;
-
+use App\WebScraper\Scraper;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\CssSelector\CssSelectorConverter;
 
-class Scrape extends AbstractScrape 
+class Scrape extends Scraper 
 {
     const types = [
         'detached',
@@ -28,8 +28,8 @@ class Scrape extends AbstractScrape
 
     const search_button_list_element = 'housePrices';
 
-    const number_search_element = '.section .sort-bar-results';
-    
+    const number_search_element = '#content > div.sold-prices-content-wrapper > div.sold-prices-content > div.results > div.results-filters > div.sort-bar > div.section.sort-bar-results';
+
     //check if inactive
     const number_search_pagination_element = '.pagination .pagination-next';
 
@@ -50,7 +50,11 @@ class Scrape extends AbstractScrape
 
     private function getSearchNumberAddresses(string $url) : int{
         $crawler = new Crawler($url);
-        $crawler->filter($this->number_search_element);
+        $converter = new CssSelectorConverter();
+
+        $crawler = $crawler->filterXPath($converter->toXPath(self::number_search_element));
+        var_dump($crawler);
+        exit();
         return intval($crawler);
     }
 
@@ -59,28 +63,28 @@ class Scrape extends AbstractScrape
         /*
             address, type of property and price of 5 most expensive properties sold in the last 10 years
         */
-        $forms = [
-            'select-button' => $this->search_button_list_element,
-            'form' => [
-                'searchLocation' => $search
-            ]
+
+        //With more development, more than one form can be excecuted at a time.
+        $forms = [];
+
+        $form = new \stdClass();
+        $form->selectButton = self::search_button_list_element;
+        $form->form = [
+            'searchLocation' => $search
         ];
-        $Date = strtotime(time()); // February 22nd, 2011. 28 days in this month, 29 next year.
-        
+        $forms[] = $form;
+
         $ten_years_ago = strtotime('-10 year', time());
 
-        $url = $this->submitSearch($this->base_url, $forms);
+        $url = $this->submitSearch(self::base_url, $forms);
 
-        $filters = [
-            'select-button' => $this->search_button_list_element,
-            'form' => [
-                'sortBy' => 'DEED_DATE'
-            ]
-        ];
+        $filters = ['sortBy' => 'DEED_DATE'];
 
         $number = $this->getSearchNumberAddresses($url);
         
-        $this->filterOnSelect($url, $filters);
+        $url = $this->filterOnSelect($url, $filters);
+        var_dump($url);
+        exit();
 
         $client = new Client();
         $client->request('GET', $url);

@@ -7,32 +7,8 @@ use Symfony\Component\HttpClient\HttpClient;
 use Acme\Client;
 use Symfony\Component\DomCrawler\Link;
 
-abstract class AbstractScrape
+class Scraper
 {
-
-    public function doRangeScrape(array $urls, array $elements_range) : array{
-        $crawler = new Crawler($html);
-        
-    }
-
-    public function doScrape(array $urls, array $elements){
-
-    }
-
-    public function searchValueConditionOnPage(string $url, string $element, string $value) : string{
-        $html = '<html>
-<body>
-    <span id="article-100" class="article">Article 1</span>
-    <span id="article-101" class="article">Article 2</span>
-    <span id="article-102" class="article">Article 3</span>
-</body>
-</html>';
-
-$crawler = new Crawler();
-$crawler->addHtmlContent($html);
-
-    }
-
 
     public function paginate(Client $client, string $paginate_element_collect, $paginate_end_element = null, array $return_html) : string{
 
@@ -58,30 +34,29 @@ $crawler->addHtmlContent($html);
         $browser = new HttpBrowser(HttpClient::create());
         $crawler = $browser->request('GET', $url);
 
-        foreach ($forms as $key => $form) {
-            $form = $crawler->selectButton($form['select-button'])->form();
-            foreach ($form['form'] as $key => $value) {
-                $form[$key] = $value;
+            foreach ($forms as $key => $form) {
+                $submit_form = $crawler->selectButton($form->selectButton)->form();
+                foreach ($form->form as $key => $value) {
+                    $submit_form[$key] = $value;
+                }
+                $crawler = $browser->submit($submit_form);
             }
-            
-            $crawler = $browser->submit($form);
-        }
-        //return url
-        return $crawler;
+        //return url for effiency
+        return $crawler->getUri();
     }
 
     public function filterOnSelect(string $url, array $filters) : string{
         $browser = new HttpBrowser(HttpClient::create());
         $crawler = $browser->request('GET', $url);
-        foreach ($filters as $key => $form) {
-            $form = $crawler->selectButton($form['select-button'])->form();
-            foreach ($form['form'] as $key => $value) {
-                $form->select($value);
-            }
-            $crawler = $browser->submit($form);
+        foreach ($filters as $key => $filter) {
+            var_dump($filters);
+            exit();
+            $submit_filter = $crawler->selectButton($key)->form();
+            $submit_filter->select($value);
+            $crawler = $browser->submit($submit_filter);
         }
         //return url
-        return $crawler;
+        return $crawler->getUri();
     }
 
 }

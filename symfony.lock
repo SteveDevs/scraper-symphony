@@ -35,6 +35,9 @@
             "bin/console"
         ]
     },
+    "symfony/css-selector": {
+        "version": "v5.2.3"
+    },
     "symfony/dependency-injection": {
         "version": "v5.2.3"
     },
@@ -93,6 +96,9 @@
             "src/Controller/.gitignore",
             "src/Kernel.php"
         ]
+    },
+    "symfony/http-client": {
+        "version": "v5.2.3"
     },
     "symfony/http-client-contracts": {
         "version": "v2.3.1"
