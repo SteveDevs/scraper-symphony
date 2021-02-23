@@ -13,20 +13,32 @@ class GetPropertiesByPostalCommand extends Command
 {
 
     protected static $defaultName = 'app:scrape-right-move-properties';
+
     protected function configure() : void{
 
         $this->setName('app:scrape-right-move-properties')
             ->setDescription('Scrape properties')
             ->addArgument('postal-code', InputArgument::OPTIONAL, 'Postal code');
-            
-            /*->addArgument('limit', InputArgument::OPTIONAL, 'Limit number of properties')
-            ->addArgument('property_limit', InputArgument::OPTIONAL, 'Limit property number of properties');
-            ->addArgument('limit_order', InputArgument::OPTIONAL, 'Limit order on properties');*/
     }
 
     protected function execute(InputInterface $input, OutputInterface $output){
 
-        $return = ((new Scrape())->getProperties($input->getArgument('postal-code')));
-        $output->writeln('<redt>Tomorrow will be snowing</redt>');
+        /*
+            address, type of property and price of 5 most expensive properties sold in the last 10 years
+        */
+
+        $properties = ((new Scrape())->getProperties($input->getArgument('postal-code')));
+        $output->writeln('Properties:');
+        $output->writeln('Number of properties: ' . $properties['number_of_props']);
+        
+        $output->writeln('');
+        unset($properties['number_of_props']);
+        foreach ($properties as $property) {
+            $output->writeln('Address: ' . $property[0]);
+            $output->writeln('Type: ' . $property[1]);
+            $output->writeln('Price: ' . chr(163) . number_format($property[2], 2));
+            $output->writeln('');
+        }
+        return 1;
     }
 }

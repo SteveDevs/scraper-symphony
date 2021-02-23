@@ -2,82 +2,71 @@
 namespace App\WebScraper\Sites\RightMove;
 
 use App\WebScraper\Scraper;
-use Symfony\Component\DomCrawler\Crawler;
-use Symfony\Component\BrowserKit\HttpBrowser;
-use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\CssSelector\CssSelectorConverter;
 
 class Scrape extends Scraper 
 {
+    /**
+     * Base url
+     *
+     * @var string
+     */
+    const BASE_URL = 'https://www.rightmove.co.uk/house-prices.html';
 
-    const property_elements = [
-        'address' => '.propertyCard > a',
-        'type' => '.propertyType',
-        'price' => 'div > div.transaction-table-container > table > tbody > tr > td.price',
-        'date_sold' => 'td.date-sold'
-    ];
+    /**
+     * Search button element
+     *
+     * @var string
+     */
+    const SEARCH_BUTTON_LIST_ELEMENT = 'housePrices';
 
-    const base_url = 'https://www.rightmove.co.uk/house-prices.html';
+    /**
+     * @param string $url
+     * @return int
+     *
+     * Get number of addresses
+     */
+    private function getSearchNumberAddresses(string $url) : string
+    {
 
-    const search_button_list_element = 'housePrices';
-
-    const number_search_element = '.sort-bar-results';
-
-    //check if inactive
-    const number_search_pagination_element = '.pagination .pagination-next';
-
-    const propertyCard_content = 'propertyCard-content';
-
-    const pages = [
-        'searched_page' => [
-            'filtering' => [
-                'submit_search' => '',
-                'radius' => 'radius',
-                'soldIn' => 'soldIn',
-                'propertyType' => 'propertyType',
-                'tenure' => 'tenure',
-                'sortBy' => 'sortBy',
-            ],
-        ]
-    ];
-
-
-
-    private function getSearchNumberAddresses(string $url) : int{
-        return intval($this->getSearchPageJsonData($url, "{\"results", "window.__APP_CONFIG__")->results->resultCount);
+        return $this->getSearchPageJsonData($url, "{\"results", "window.__APP_CONFIG__")->results->resultCount;
     }
 
-
-    public function getProperties($search, $filters  = null){
-        /*
-            address, type of property and price of 5 most expensive properties sold in the last 10 years
-        */
+    /**
+     * @param string $search
+     * @param array null $filters
+     * @return array
+     *
+     * Get Properties
+     */
+    public function getProperties(string $search, array $filters  = null) : array
+    {
 
         //With more development, more than one form can be excecuted at a time.
+
+        //Forms stdClass array
         $forms = [];
 
         $form = new \stdClass();
-        $form->selectButton = self::search_button_list_element;
+        $form->selectButton = self::SEARCH_BUTTON_LIST_ELEMENT;
         $form->form = [
             'searchLocation' => $search
         ];
         $forms[] = $form;
 
+        //Ten years integer
         $ten_years_ago = strtotime('-10 year', time());
 
-        $url = $this->submitSearch(self::base_url, $forms);
+        //Search on https://www.rightmove.co.uk/house-prices.html
+        $url = $this->submitSearch(self::BASE_URL, $forms);
 
-        //$filters = ['sortBy' => 'DEED_DATE'];
-
+        //Get number of addresses
         $number = $this->getSearchNumberAddresses($url);
-        
-        //$url = $this->filterOnSelect($url, $filters);
-        //var_dump($url);
-        //exit();
 
         $properties = $this->paginate($url, $ten_years_ago);
-        var_dump(count($properties));
-        exit();
+        $properties = array_splice($properties, 0, 5);
+        $properties['number_of_props'] = $number;
+
+        return $properties;
     }
 
 }
