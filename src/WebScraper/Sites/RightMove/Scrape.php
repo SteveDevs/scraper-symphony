@@ -27,8 +27,12 @@ class Scrape extends Scraper
      */
     private function getSearchNumberAddresses(string $url) : string
     {
-
-        return $this->getSearchPageJsonData($url, "{\"results", "window.__APP_CONFIG__")->results->resultCount;
+        $data = $this->getSearchPageJsonData($url, "{\"results", "window.__APP_CONFIG__");
+        if(!isset($data) || $data == ''){
+            return 'No Results';
+        }
+        return $data->results->resultCount;
+        
     }
 
     /**
@@ -59,11 +63,20 @@ class Scrape extends Scraper
         //Search on https://www.rightmove.co.uk/house-prices.html
         $url = $this->submitSearch(self::BASE_URL, $forms);
 
+        
         //Get number of addresses
         $number = $this->getSearchNumberAddresses($url);
 
+        if($number === 'No Results'){
+            return [
+                'error' => $number
+            ];
+        }
+        //Filter on each page
+        $url = $this->newPageUrl($url,'sortBy', 'PRICE_DESC');
+
         $properties = $this->paginate($url, $ten_years_ago);
-        $properties = array_splice($properties, 0, 5);
+                
         $properties['number_of_props'] = $number;
 
         return $properties;

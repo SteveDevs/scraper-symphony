@@ -28,17 +28,22 @@ class GetPropertiesByPostalCommand extends Command
         */
 
         $properties = ((new Scrape())->getProperties($input->getArgument('postal-code')));
-        $output->writeln('Properties:');
-        $output->writeln('Number of properties: ' . $properties['number_of_props']);
-        
-        $output->writeln('');
-        unset($properties['number_of_props']);
-        foreach ($properties as $property) {
-            $output->writeln('Address: ' . $property[0]);
-            $output->writeln('Type: ' . $property[1]);
-            $output->writeln('Price: ' . chr(163) . number_format($property[2], 2));
+        if(isset($properties['error'])) {
+            $output->writeln('Error:' . $properties['error']);
+        }else{
+            $output->writeln('Properties:');
+            $output->writeln('Number of properties: ' . $properties['number_of_props']);
+            
             $output->writeln('');
+            unset($properties['number_of_props']);
+            foreach ($properties as $property) {
+                $output->writeln('Address: ' . $property[0]);
+                $output->writeln('Type: ' . $property[1]);
+                $output->writeln('Price: ' . $property[2]);
+                $output->writeln('');
+            }
         }
+
         return 1;
     }
 }

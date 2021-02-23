@@ -7,20 +7,20 @@ use Symfony\Component\HttpClient\HttpClient;
 class Scraper
 {
     /**
-     * @param string $url
-     * @param string $page_num
+     * @param string $url 
      * @param string $key_page_param
+     *  @param string $param_value
      * @return string
      *
-     * Get next page url
+     * Get new page url
      */
-    public function getNextPageUrl(string $url, string $page_num, string $key_page_param) : string 
+    public function newPageUrl(string $url, string $key_page_param, string $param_value ) : string 
     {
         $url_components = parse_url($url); 
 
         parse_str($url_components['query'], $params); 
 
-        $params[$key_page_param] = $page_num;
+        $params[$key_page_param] = $param_value;
 
         $url_no_params = substr ($url, 0, strpos($url , '?') );
         $output = implode('&', array_map(
@@ -33,7 +33,7 @@ class Scraper
         if (isset($params)) {
             $new_url = $url_no_params . '?' . $output;
         }else{
-            $new_url = $url . '?' . $key_page_param . '=' . $page_num;
+            $new_url = $url . '?' . $key_page_param . '=' . $param_value;
         }
         $new_url = str_replace('\'', '', $new_url);
         return $new_url;
@@ -51,7 +51,7 @@ class Scraper
      * Needs work so it works universally for sites
      */
     
-    public function paginate(string $url,int $limit, array $return_data = null, int $page_num = 1, int $number_of_pages = 0) : array
+    public function paginate(string $url,int $limit, array $return_data = [], int $page_num = 1, int $number_of_pages = 0) : array
     {
         //Check last page
         if($number_of_pages > 0 && $page_num > $number_of_pages){
@@ -59,8 +59,8 @@ class Scraper
         }
 
         //Get next page url
-        $new_url = $this->getNextPageUrl($url, $page_num, 'page');
-
+        $new_url = $this->newPageUrl($url,'page', $page_num);
+        
         //Json data for page
         $data = $this->getSearchPageJsonData($new_url, "{\"results", "window.__APP_CONFIG__");
 
@@ -68,108 +68,29 @@ class Scraper
         if($number_of_pages == 0){
             $number_of_pages = $data->pagination->last;
         }
-
-        //If on first page
-        if($page_num == 1){
-            foreach ($data->results->properties as $key => $value) {
-                $prop_data = $data->results->properties[$key];
+        foreach ($data->results->properties as $key => $value) {
+            if(count($return_data) == 5){
+                return isset($return_data) ? $return_data : [];
+            }
+            $prop_data = $data->results->properties[$key];
 
                 //Check if time is after 10 years
-                if(isset($limit) && strtotime($prop_data->transactions[0]->dateSold) >= $limit){
+            if(isset($limit) && strtotime($prop_data->transactions[0]->dateSold) >= $limit){
 
-                    $number = str_replace('&pound;', '', $prop_data->transactions[0]->displayPrice);
-                    $number = (int) filter_var($number, FILTER_SANITIZE_NUMBER_INT);
+                $number = str_replace('&pound;', '', $prop_data->transactions[0]->displayPrice);
 
-                    $return_data[] = [
-                        $prop_data->address,
-                        $prop_data->propertyType,
-                        $number
-                    ];
+                $return_data[] = [
+                    $prop_data->address,
+                    $prop_data->propertyType,
+                    $number
+                ];
 
-                }else{
-                    //Return properties sorted
-                    usort($return_data, function($a, $b){
-                        if ($a[2] == $b[2]) return 0;
-                        return ($a[2] > $b[2]) ? -1: 1;
-                    });
-                    $return_data = array_splice($return_data, 0, 5);
-                    return isset($return_data) ? $return_data : [];
-                }
+            }
                 
-            }
-
-            /*
-                Sort properties on first page to be used for compare 
-                with th rest of the pages if more pages exist
-            */
-            usort($return_data, function($a, $b){
-                if ($a[2] == $b[2]) return 0;
-                return ($a[2] > $b[2]) ? -1: 1;
-            });
-
-            //Cut propers to top 6
-            $return_data = array_splice($return_data, 0, 6);
-        }else{
-
-            //After first page
-
-            foreach ($data->results->properties as $key => $value) {
-                $prop_data = $data->results->properties[$key];
-
-                 //If date of propety if futher back than 10 years
-                 if(isset($limit) && strtotime($prop_data->transactions[0]->dateSold) >= $limit){
-
-                    //Remove &pound from number
-                    $number = str_replace('&pound;', '', $prop_data->transactions[0]->displayPrice);
-                    
-                    //Convert number to int
-                    $number = (int) filter_var($number, FILTER_SANITIZE_NUMBER_INT);
-
-                    //Swap/splice index edit top prices from top to bottom
-                    $change_index = 6;
-                    if($return_data[5][2] < $number){
-                        $change_index = 5;
-                        if($return_data[4][2] < $number){
-                            $change_index = 4;
-                            if($return_data[3][2] < $number){
-                                $change_index = 3;
-                                if($return_data[2][2] < $number){
-                                    $change_index = 2;
-                                    if($return_data[1][2] < $number){
-                                        $change_index = 1;
-                                        if($return_data[0][2] < $number){
-
-                                            $change_index = 0;
-                                        } 
-                                    }
-                                }
-
-                            }
-                        }
-                    }
-                    //Check if need to swap
-                    if($change_index < 6){
-                        $inserted = array( [
-                            $prop_data->address,
-                            $prop_data->propertyType,
-                            $number
-                        ]);
-
-                        //Swap
-                        array_splice( $return_data, $change_index, 0, $inserted );
-                    }
-
-                }else{
-
-                    //Properties within ten years reached
-                    return isset($return_data) ? $return_data : [];
-                }
-
-            }
         }
 
-    //Recursive call
-    return $this->paginate($new_url, $limit, $return_data, $page_num + 1, $number_of_pages);
+        //Recursive call
+        return $this->paginate($new_url, $limit, $return_data, $page_num + 1, $number_of_pages);
     }
 
     /**
